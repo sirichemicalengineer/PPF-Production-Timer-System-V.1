@@ -1,0 +1,1332 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>Production Timer System — PPF</title>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --ink:       #064e3b;
+      --ink-2:     #2c3e50;
+      --muted:     #6b7b8d;
+      --subtle:    #a8b4c0;
+      --border:    #d1fae5;
+      --bg:        #f0fdf4;
+      --surface:   #ffffff;
+      --accent:    #10b981;
+      --accent-dk: #059669;
+      --green:     #10b981;
+      --green-bg:  #d1fae5;
+      --amber:     #b45309;
+      --amber-bg:  #fef3c7;
+      --red:       #b91c1c;
+      --red-bg:    #fee2e2;
+      --purple:    #8b5cf6;
+      --purple-bg: #f3f0ff;
+      --radius-sm: 6px;
+      --radius:    10px;
+      --radius-lg: 16px;
+      --shadow:    0 1px 4px rgba(15,25,35,.06), 0 4px 16px rgba(15,25,35,.04);
+      --shadow-md: 0 4px 24px rgba(15,25,35,.10);
+    }
+
+    body {
+      font-family: 'IBM Plex Sans Thai', sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      min-height: 100vh;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    /* ── Header ── */
+    #app-header {
+      background: var(--ink);
+      height: 56px;
+      padding: 0 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .header-left { display: flex; align-items: center; gap: 14px; }
+    .logo-mark {
+      width: 32px; height: 32px;
+      background: var(--accent);
+      border-radius: var(--radius-sm);
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 16px; color: #fff;
+      letter-spacing: -1px;
+    }
+    .header-brand { display: flex; flex-direction: column; }
+    .brand-name { color: #fff; font-size: 14px; font-weight: 600; letter-spacing: .2px; }
+    .brand-sub  { color: rgba(255,255,255,.45); font-size: 11px; font-weight: 400; letter-spacing: .5px; text-transform: uppercase; }
+    .header-right { display: flex; align-items: center; gap: 16px; }
+    #realtime-clock {
+      font-family: 'IBM Plex Mono', monospace;
+      color: rgba(255,255,255,.75);
+      font-size: 13px; font-weight: 400;
+    }
+    .pulse-dot {
+      display: inline-flex; align-items: center; gap: 6px;
+      color: #34d399; font-size: 11px; font-weight: 600;
+      letter-spacing: .5px; text-transform: uppercase;
+    }
+    .pulse-dot::before {
+      content: ''; width: 7px; height: 7px;
+      border-radius: 50%; background: #34d399;
+      animation: pulse-anim 2s ease infinite;
+    }
+    @keyframes pulse-anim {
+      0%,100% { opacity:1; transform:scale(1); }
+      50%      { opacity:.5; transform:scale(.85); }
+    }
+
+    /* ── Layout ── */
+    #main {
+      max-width: 1140px;
+      margin: 0 auto;
+      padding: 24px 20px 40px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    /* ── Section label ── */
+    .section-label {
+      font-size: 10px; font-weight: 600;
+      letter-spacing: 1.5px; text-transform: uppercase;
+      color: var(--subtle);
+      margin-bottom: 10px;
+    }
+
+    /* ── Card ── */
+    .card {
+      background: var(--surface);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+    }
+    .card-pad { padding: 22px 24px; }
+
+    /* ── Top Grid ── */
+    .top-grid {
+      display: grid;
+      grid-template-columns: 300px 1fr;
+      gap: 18px;
+      align-items: start;
+    }
+
+    /* ── Employee Form ── */
+    .emp-card { border-left: 3px solid var(--accent); }
+    .card-header {
+      display: flex; align-items: center; gap: 8px;
+      padding: 16px 20px 14px;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px; font-weight: 600; color: var(--ink);
+    }
+    .card-header .icon-sq {
+      width: 28px; height: 28px;
+      background: #e8f0fd; border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .card-header .icon-sq svg { width: 15px; height: 15px; stroke: var(--accent); }
+    .card-body { padding: 16px 20px; display: flex; flex-direction: column; gap: 12px; }
+
+    label.field-label {
+      display: block;
+      font-size: 11px; font-weight: 600;
+      color: var(--muted); letter-spacing: .4px;
+      text-transform: uppercase; margin-bottom: 5px;
+    }
+    .req { color: var(--red); }
+
+    .form-field {
+      width: 100%;
+      padding: 9px 12px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      font-family: 'IBM Plex Sans Thai', sans-serif;
+      font-size: 14px;
+      color: var(--ink);
+      background: #fafbfc;
+      outline: none;
+      transition: border-color .15s, box-shadow .15s;
+      -webkit-appearance: none; appearance: none;
+    }
+    .form-field:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(0,82,204,.12);
+      background: #fff;
+    }
+    .form-field:disabled {
+      background: #f1f4f8;
+      color: #aab4be;
+      cursor: not-allowed;
+      border-color: #e8ecf0;
+    }
+    select.form-field {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7b8d' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 11px center;
+      padding-right: 32px;
+    }
+
+    /* ── Standard Time Input ── */
+    .std-time-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .std-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: var(--purple-bg);
+      color: var(--purple);
+      font-size: 10px; font-weight: 700;
+      letter-spacing: .6px; text-transform: uppercase;
+      padding: 3px 8px; border-radius: 20px;
+      margin-left: 6px;
+    }
+
+    /* ── Timer Card ── */
+    .timer-card {
+      position: relative;
+      padding: 28px 28px 22px;
+      text-align: center;
+    }
+    .timer-status {
+      position: absolute;
+      top: 18px; right: 20px;
+    }
+    .status-pill {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 4px 12px; border-radius: 20px;
+      font-size: 11px; font-weight: 700;
+      letter-spacing: 1px; text-transform: uppercase;
+      background: #f1f4f8; color: var(--subtle);
+      transition: all .25s;
+    }
+    .status-pill .dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--subtle); transition: background .25s;
+    }
+    .status-pill.working { background: var(--green-bg); color: var(--green); }
+    .status-pill.working .dot { background: var(--green); animation: pulse-anim 1.5s ease infinite; }
+    .status-pill.paused  { background: var(--amber-bg); color: var(--amber); }
+    .status-pill.paused  .dot { background: var(--amber); }
+
+    .timer-label-sm {
+      font-size: 10px; font-weight: 600;
+      letter-spacing: 2.5px; text-transform: uppercase;
+      color: var(--subtle); margin-bottom: 6px;
+    }
+    #display {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 72px; font-weight: 600;
+      color: var(--ink); letter-spacing: -3px;
+      line-height: 1; margin-bottom: 6px;
+    }
+    #lap-display {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 20px; font-weight: 400;
+      color: var(--muted); letter-spacing: -1px;
+      margin-bottom: 24px;
+    }
+    .lap-label { font-size: 11px; color: var(--subtle); margin-right: 4px; }
+
+    /* Buttons */
+    .btn-row { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 14px; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 10px 20px; border-radius: var(--radius);
+      border: 1.5px solid transparent;
+      font-family: 'IBM Plex Sans Thai', sans-serif;
+      font-size: 14px; font-weight: 600;
+      cursor: pointer;
+      transition: transform .12s, box-shadow .12s, background .15s;
+      touch-action: manipulation;
+    }
+    .btn:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,.12); }
+    .btn:active:not(:disabled) { transform: scale(.97); box-shadow: none; }
+    .btn:disabled { opacity: .38; cursor: not-allowed; }
+    .btn svg { width: 15px; height: 15px; flex-shrink: 0; }
+
+    .btn-start { background: var(--green);   color: #fff; border-color: var(--green); }
+    .btn-start:hover:not(:disabled) { background: #086b4f; }
+    .btn-lap   { background: var(--amber);  color: #fff; border-color: var(--amber); }
+    .btn-lap:hover:not(:disabled) { background: #9a4807; }
+    .btn-ghost {
+      background: var(--surface); color: var(--muted);
+      border-color: var(--border);
+    }
+    .btn-ghost:hover:not(:disabled) { background: var(--bg); border-color: #c1cad3; }
+    .btn-save {
+      background: var(--accent); color: #fff;
+      border-color: var(--accent);
+      width: 100%; max-width: 260px;
+      justify-content: center;
+      padding: 12px 24px; font-size: 15px;
+      border-radius: var(--radius);
+    }
+    .btn-save:hover:not(:disabled) { background: var(--accent-dk); }
+
+    /* ── Stats Row ── */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 14px;
+    }
+    .stat-card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      padding: 14px 16px;
+      box-shadow: var(--shadow);
+    }
+    .stat-icon {
+      width: 30px; height: 30px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 10px;
+    }
+    .stat-icon svg { width: 16px; height: 16px; }
+    .stat-icon.blue   { background: #dbeafe; }
+    .stat-icon.blue svg   { stroke: #1d4ed8; }
+    .stat-icon.green  { background: var(--green-bg); }
+    .stat-icon.green svg  { stroke: var(--green); }
+    .stat-icon.amber  { background: var(--amber-bg); }
+    .stat-icon.amber svg  { stroke: var(--amber); }
+    .stat-icon.purple { background: var(--purple-bg); }
+    .stat-icon.purple svg { stroke: var(--purple); }
+    .stat-icon.red    { background: var(--red-bg); }
+    .stat-icon.red svg    { stroke: var(--red); }
+
+    .stat-val   { font-size: 22px; font-weight: 700; color: var(--ink); font-family: 'IBM Plex Mono', monospace; line-height: 1.2; }
+    .stat-label { font-size: 11px; color: var(--muted); margin-top: 3px; font-weight: 500; }
+    .stat-sub   { font-size: 10px; color: var(--subtle); margin-top: 1px; }
+
+    /* ── Standard Time Bar ── */
+    .std-bar {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      box-shadow: var(--shadow);
+    }
+    .std-bar-label {
+      font-size: 11px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 1px;
+      color: var(--purple); white-space: nowrap;
+      background: var(--purple-bg);
+      padding: 4px 10px; border-radius: 20px;
+    }
+    .std-item {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 13px; color: var(--ink-2);
+    }
+    .std-name { color: var(--muted); font-size: 11px; white-space: nowrap; }
+    .std-time-val {
+      font-family: 'IBM Plex Mono', monospace;
+      font-weight: 600; font-size: 14px;
+    }
+    .std-item.ok  .std-time-val { color: var(--green); }
+    .std-item.warn .std-time-val { color: var(--amber); }
+    .std-item.over .std-time-val { color: var(--red); }
+    .std-divider { width: 1px; height: 28px; background: var(--border); flex-shrink: 0; }
+
+    /* Progress Bar */
+    .progress-wrap { flex: 1; }
+    .progress-bar-bg {
+      height: 6px; background: #e8ecf0; border-radius: 3px;
+      overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%; background: var(--green);
+      border-radius: 3px; transition: width .4s ease, background .4s;
+    }
+    .progress-pct { font-size: 11px; color: var(--muted); margin-top: 3px; text-align: right; }
+
+    /* ── History Table ── */
+    .history-card { overflow: hidden; }
+    .history-header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .history-title {
+      font-size: 13px; font-weight: 700;
+      color: var(--ink); display: flex; align-items: center; gap: 8px;
+    }
+    .count-badge {
+      background: var(--accent); color: #fff;
+      font-size: 11px; font-weight: 700;
+      padding: 2px 8px; border-radius: 20px;
+    }
+    .export-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 7px 14px; border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm); background: var(--surface);
+      font-family: 'IBM Plex Sans Thai', sans-serif;
+      font-size: 12px; font-weight: 600; color: var(--muted);
+      cursor: pointer; transition: border-color .15s, color .15s;
+    }
+    .export-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .export-btn svg { width: 13px; height: 13px; }
+
+    .table-wrap {
+      overflow-x: auto; overflow-y: auto;
+      max-height: 320px;
+      -webkit-overflow-scrolling: touch;
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    thead { background: #f8fafc; position: sticky; top: 0; z-index: 1; }
+    th {
+      padding: 10px 16px;
+      text-align: left; font-size: 10px; font-weight: 700;
+      color: var(--subtle); text-transform: uppercase; letter-spacing: .8px;
+      border-bottom: 1px solid var(--border); white-space: nowrap;
+    }
+    td { padding: 11px 16px; border-bottom: 1px solid #f3f5f8; vertical-align: middle; }
+    tbody tr { transition: background .1s; }
+    tbody tr:hover { background: #f8fafc; }
+    tbody tr:last-child td { border-bottom: none; }
+
+    .lap-no {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 26px; height: 26px; border-radius: 6px;
+      background: var(--bg); border: 1px solid var(--border);
+      font-size: 11px; font-weight: 700; color: var(--accent);
+    }
+    .emp-name { font-weight: 600; color: var(--ink); }
+    .emp-sub  { font-size: 11px; color: var(--muted); margin-top: 1px; }
+    .mono-val {
+      font-family: 'IBM Plex Mono', monospace;
+      font-weight: 600; font-size: 14px; color: var(--ink);
+    }
+    .vs-std {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 11px; font-weight: 600; padding: 2px 8px;
+      border-radius: 20px;
+    }
+    .vs-std.ok   { background: var(--green-bg);  color: var(--green); }
+    .vs-std.warn { background: var(--amber-bg); color: var(--amber); }
+    .vs-std.over { background: var(--red-bg);   color: var(--red); }
+    .empty-msg td {
+      text-align: center; color: var(--muted);
+      padding: 40px; font-size: 13px;
+    }
+
+    /* ── Toast ── */
+    #toast {
+      position: fixed; bottom: 24px; right: 24px;
+      padding: 12px 18px; border-radius: var(--radius);
+      font-size: 13px; font-weight: 600;
+      z-index: 999; opacity: 0; transform: translateY(8px);
+      transition: opacity .25s, transform .25s;
+      pointer-events: none; max-width: 300px;
+      box-shadow: var(--shadow-md);
+      display: flex; align-items: center; gap: 8px;
+    }
+    #toast.show    { opacity: 1; transform: translateY(0); }
+    #toast.success { background: var(--green-bg); color: var(--green); border: 1px solid #6ee7b7; }
+    #toast.warn    { background: var(--amber-bg); color: var(--amber); border: 1px solid #fcd34d; }
+    #toast.error   { background: var(--red-bg);   color: var(--red);   border: 1px solid #fca5a5; }
+
+    /* ── Loading ── */
+    #loading-overlay {
+      position: fixed; inset: 0;
+      background: rgba(15,25,35,.35);
+      display: none; align-items: center; justify-content: center;
+      z-index: 200; backdrop-filter: blur(2px);
+    }
+    #loading-overlay.show { display: flex; }
+    .loader-box {
+      background: var(--surface); border-radius: var(--radius-lg);
+      padding: 28px 36px; text-align: center;
+      box-shadow: var(--shadow-md);
+    }
+    .spinner {
+      width: 38px; height: 38px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .65s linear infinite;
+      margin: 0 auto 12px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loader-text { font-size: 13px; color: var(--muted); font-weight: 500; }
+
+    /* ── Footer ── */
+    .app-footer {
+      text-align: center; color: var(--subtle);
+      font-size: 11px; padding: 8px 0 4px;
+      letter-spacing: .3px;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 960px) {
+      .top-grid { grid-template-columns: 1fr; }
+      .stats-row { grid-template-columns: repeat(3, 1fr); }
+    }
+    @media (max-width: 680px) {
+      .stats-row { grid-template-columns: repeat(2, 1fr); }
+      #display { font-size: 54px; }
+      #app-header { padding: 0 16px; }
+      #main { padding: 16px 12px 32px; }
+      .std-bar { flex-wrap: wrap; gap: 10px; }
+    }
+    @media (max-width: 420px) {
+      #display { font-size: 42px; }
+      .stats-row { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="loading-overlay">
+  <div class="loader-box">
+    <div class="spinner"></div>
+    <p class="loader-text">กำลังบันทึกข้อมูล...</p>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<!-- Header -->
+<header id="app-header">
+  <div class="header-left">
+    <div class="logo-mark">PPF</div>
+    <div class="header-brand">
+      <span class="brand-name">Production Timer</span>
+      <span class="brand-sub">บริษัทเพิ่มพูนผลิตภัณฑ์อาหาร จำกัด</span>
+    </div>
+  </div>
+  <div class="header-right">
+    <span class="pulse-dot">Online</span>
+    <span id="realtime-clock">--:--:--</span>
+  </div>
+</header>
+
+<div id="main">
+
+  <!-- Top Grid: Form + Timer -->
+  <div class="top-grid">
+
+    <!-- Employee Card -->
+    <div class="card emp-card">
+      <div class="card-header">
+        <div class="icon-sq">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
+            <circle cx="12" cy="7" r="4"/>
+          </svg>
+        </div>
+        ข้อมูลพนักงาน
+      </div>
+      <div class="card-body">
+
+        <div>
+          <label class="field-label" for="empName">ชื่อ-นามสกุล <span class="req">*</span></label>
+          <input class="form-field" id="empName" placeholder="กรอกชื่อ-นามสกุล" autocomplete="name">
+        </div>
+
+        <div>
+          <label class="field-label" for="dept">แผนก</label>
+          <select class="form-field" id="dept" onchange="onDeptChange()">
+            <option value="">— เลือกแผนก —</option>
+            <option value="โซนสกปรก (Zone A)">โซนสกปรก (Zone A)</option>
+            <option value="โซนสะอาด (Zone B)">โซนสะอาด (Zone B)</option>
+            <option value="โซนผลิตไก่ตัว">โซนผลิตไก่ตัว</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="field-label" for="station">สถานีงาน <span class="req">*</span></label>
+          <select class="form-field" id="station" onchange="onStationChange()">
+            <option value="">— เลือกสถานีงาน —</option>
+            <optgroup label="โซนสกปรก (Zone A)">
+              <option value="เชือด">เชือด</option>
+              <option value="เก็บเลือด">เก็บเลือด</option>
+              <option value="ผลิตเลือดก้อน">ผลิตเลือดก้อน</option>
+              <option value="แขวนไก่ขึ้นราวโซนสกปรก">แขวนไก่ขึ้นราวโซนสกปรก</option>
+              <option value="ถอนขน">ถอนขน</option>
+              <option value="ผ่าก้น">ผ่าก้น</option>
+              <option value="งัดล้วงเครื่องใน">งัดล้วงเครื่องใน</option>
+              <option value="ดึงไส้">ดึงไส้</option>
+              <option value="คัดแยกเครื่องใน">คัดแยกเครื่องใน</option>
+              <option value="ผลิตเครื่องใน">ผลิตเครื่องใน</option>
+              <option value="คัดแยกไก่หน้าชิวเลอร์">คัดแยกไก่หน้าชิวเลอร์</option>
+            </optgroup>
+            <optgroup label="โซนผลิตไก่ตัว">
+              <option value="บรรจุไก่ตัวลงถุง">บรรจุไก่ตัวลงถุง</option>
+              <option value="ชั่งน้ำหนักไก่ตัว">ชั่งน้ำหนักไก่ตัว</option>
+              <option value="บันทึกผลผลิตไก่ตัว">บันทึกผลผลิตไก่ตัว</option>
+            </optgroup>
+            <optgroup label="โซนสะอาด (Zone B) — ชำแหละ">
+              <option value="แขวนไก่ขึ้นราวชำแหละ">แขวนไก่ขึ้นราวชำแหละ</option>
+              <option value="ผ่าน่องกรีดอก">ผ่าน่องกรีดอก</option>
+              <option value="กรีดหลังหักขา">กรีดหลังหักขา</option>
+              <option value="ตัดขา B">ตัดขา B</option>
+              <option value="ชั่งและบรรจุขา B">ชั่งและบรรจุขา B</option>
+              <option value="ตัดนส.">ตัดนส.</option>
+              <option value="ชั่งและบรรจุนส.">ชั่งและบรรจุนส.</option>
+              <option value="ตัดปีก">ตัดปีก</option>
+              <option value="ชั่งและบรรจุปีก">ชั่งและบรรจุปีก</option>
+              <option value="ดึงBB+ตัดแต่ง">ดึงBB+ตัดแต่ง</option>
+              <option value="ชั่งและบรรจุBB">ชั่งและบรรจุBB</option>
+              <option value="กรีดสันใน">กรีดสันใน</option>
+              <option value="ดึงสันใน">ดึงสันใน</option>
+              <option value="ชั่งและบรรจุสันใน">ชั่งและบรรจุสันใน</option>
+              <option value="ปลดโครง">ปลดโครง</option>
+              <option value="ตัดมันแผ่น">ตัดมันแผ่น</option>
+              <option value="ตัดคอไก่">ตัดคอไก่</option>
+              <option value="ชั่งและบรรจุโครงไก่">ชั่งและบรรจุโครงไก่</option>
+              <option value="ชั่งและบรรจุมันแผ่น">ชั่งและบรรจุมันแผ่น</option>
+              <option value="ชั่งและบรรจุคอไก่">ชั่งและบรรจุคอไก่</option>
+            </optgroup>
+          </select>
+        </div>
+
+        <!-- Standard Time Input -->
+        <div>
+          <label class="field-label">
+            เวลามาตรฐาน
+            <span class="std-badge">Standard Time</span>
+          </label>
+          <div class="std-time-row">
+            <div>
+              <label class="field-label" for="stdMin" style="font-size:10px;margin-bottom:3px;">นาที</label>
+              <input class="form-field" id="stdMin" type="number" min="0" max="999" placeholder="0" style="text-align:center;" oninput="onStdChange()">
+            </div>
+            <div>
+              <label class="field-label" for="stdSec" style="font-size:10px;margin-bottom:3px;">วินาที</label>
+              <input class="form-field" id="stdSec" type="number" min="0" max="59" placeholder="0" style="text-align:center;" oninput="onStdChange()">
+            </div>
+          </div>
+          <div id="std-preview" style="font-size:11px;color:var(--muted);margin-top:5px;"></div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Timer Card -->
+    <div class="card timer-card">
+      <div class="timer-status">
+        <span class="status-pill" id="status-badge">
+          <span class="dot"></span>
+          <span id="status-text">IDLE</span>
+        </span>
+      </div>
+
+      <p class="timer-label-sm">Total Elapsed</p>
+      <div id="display">00:00:00</div>
+      <div id="lap-display">
+        <span class="lap-label">รอบปัจจุบัน:</span><span id="lap-time-display">--:--</span>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-start" id="startBtn" onclick="startTimer()">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+          เริ่มทำงาน
+        </button>
+        <button class="btn btn-lap" id="stopBtn" onclick="lapAndSave()" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <circle cx="12" cy="12" r="9"/><polyline points="12 6 12 12 16 14"/>
+          </svg>
+          บันทึกรอบ
+        </button>
+        <button class="btn btn-ghost" onclick="resetTimer()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M1 4v6h6M23 20v-6h-6"/>
+            <path d="M20.49 9A9 9 0 005.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 013.51 15"/>
+          </svg>
+          รีเซ็ต
+        </button>
+      </div>
+
+      <button class="btn btn-save" id="saveBtn" onclick="saveData()" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/>
+          <polyline points="17 21 17 13 7 13 7 21"/>
+          <polyline points="7 3 7 8 15 8"/>
+        </svg>
+        บันทึกลง Google Sheet
+      </button>
+    </div>
+  </div>
+
+  <!-- Standard Time Progress Bar -->
+  <div class="std-bar" id="std-bar" style="display:none;">
+    <span class="std-bar-label">⏱ เวลามาตรฐาน</span>
+    <div class="std-item" id="std-bar-target">
+      <span class="std-name">เป้าหมาย:</span>
+      <span class="std-time-val" id="std-target-val">--:--</span>
+    </div>
+    <div class="std-divider"></div>
+    <div class="std-item" id="std-bar-lap">
+      <span class="std-name">รอบล่าสุด:</span>
+      <span class="std-time-val" id="std-lap-val">--:--</span>
+    </div>
+    <div class="std-divider"></div>
+    <div class="std-item" id="std-bar-avg">
+      <span class="std-name">เฉลี่ย:</span>
+      <span class="std-time-val" id="std-avg-val">--:--</span>
+    </div>
+    <div class="std-divider"></div>
+    <div class="progress-wrap">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+        <span style="font-size:11px;color:var(--muted);" id="prog-label">ประสิทธิภาพ</span>
+        <span style="font-size:12px;font-weight:700;" id="prog-pct">—</span>
+      </div>
+      <div class="progress-bar-bg">
+        <div class="progress-bar-fill" id="prog-fill" style="width:0%;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-icon blue">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
+        </svg>
+      </div>
+      <div class="stat-val" id="count-today">0</div>
+      <div class="stat-label">งานสำเร็จวันนี้</div>
+      <div class="stat-sub">รอบ</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon green">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+        </svg>
+      </div>
+      <div class="stat-val" id="avg-time">0.0</div>
+      <div class="stat-label">เวลาเฉลี่ย</div>
+      <div class="stat-sub">นาที/รอบ</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon amber">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+        </svg>
+      </div>
+      <div class="stat-val" id="best-time">--:--</div>
+      <div class="stat-label">เวลาดีที่สุด</div>
+      <div class="stat-sub">Best Time</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon purple">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+        </svg>
+      </div>
+      <div class="stat-val" id="lap-current">0</div>
+      <div class="stat-label">รอบ Session นี้</div>
+      <div class="stat-sub">รอบ (ยังไม่ save)</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon red">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+          <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+      </div>
+      <div class="stat-val" id="over-std">0</div>
+      <div class="stat-label">เกินมาตรฐาน</div>
+      <div class="stat-sub">รอบ</div>
+    </div>
+  </div>
+
+  <!-- History Table -->
+  <div class="card history-card">
+    <div class="history-header">
+      <div class="history-title">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="stroke:var(--accent)">
+          <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="16" y1="13" x2="8" y2="13"/>
+          <line x1="16" y1="17" x2="8" y2="17"/>
+          <polyline points="10 9 9 9 8 9"/>
+        </svg>
+        ประวัติรอบการทำงาน
+        <span class="count-badge" id="history-count">0</span>
+      </div>
+      <button class="export-btn" onclick="exportCSV()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        Export CSV
+      </button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>รอบ</th>
+            <th>เวลา</th>
+            <th>พนักงาน / สถานี</th>
+            <th>เวลารอบนี้</th>
+            <th>vs มาตรฐาน</th>
+            <th>เวลาสะสม</th>
+          </tr>
+        </thead>
+        <tbody id="history-body">
+          <tr class="empty-msg"><td colspan="6">ยังไม่มีประวัติการทำงานในรอบนี้</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="app-footer">
+    PPF Production Timer System · บริษัทเพิ่มพูนผลิตภัณฑ์อาหาร จำกัด © Design By Sirirak Ruangsiri 2026
+  </div>
+
+</div>
+
+<script>
+// ================================================================
+//  app.js — Production Timer System v4 (Enhanced + Standard Time)
+// ================================================================
+
+// ── Standard Time lookup (seconds) ──────────────────────────────
+var STATION_STD = {
+  "เชือด":                          45,
+  "เก็บเลือด":                       30,
+  "ผลิตเลือดก้อน":                   60,
+  "แขวนไก่ขึ้นราวโซนสกปรก":          40,
+  "ถอนขน":                           50,
+  "ผ่าก้น":                          35,
+  "งัดล้วงเครื่องใน":                45,
+  "ดึงไส้":                          30,
+  "คัดแยกเครื่องใน":                 55,
+  "ผลิตเครื่องใน":                   70,
+  "คัดแยกไก่หน้าชิวเลอร์":          40,
+  "บรรจุไก่ตัวลงถุง":               50,
+  "ชั่งน้ำหนักไก่ตัว":               35,
+  "บันทึกผลผลิตไก่ตัว":              30,
+  "แขวนไก่ขึ้นราวชำแหละ":            40,
+  "ผ่าน่องกรีดอก":                   45,
+  "กรีดหลังหักขา":                   40,
+  "ตัดขา B":                         35,
+  "ชั่งและบรรจุขา B":                45,
+  "ตัดนส.":                          35,
+  "ชั่งและบรรจุนส.":                 45,
+  "ตัดปีก":                          30,
+  "ชั่งและบรรจุปีก":                 40,
+  "ดึงBB+ตัดแต่ง":                   50,
+  "ชั่งและบรรจุBB":                  45,
+  "กรีดสันใน":                       40,
+  "ดึงสันใน":                        35,
+  "ชั่งและบรรจุสันใน":               45,
+  "ปลดโครง":                         40,
+  "ตัดมันแผ่น":                      35,
+  "ตัดคอไก่":                        30,
+  "ชั่งและบรรจุโครงไก่":             45,
+  "ชั่งและบรรจุมันแผ่น":             40,
+  "ชั่งและบรรจุคอไก่":               35,
+};
+
+// ── State ────────────────────────────────────────────────────────
+var totalStartTime = null;
+var lastLapTime    = null;
+var timerInterval  = null;
+var lapInterval    = null;
+var isRunning      = false;
+var lapCount       = 0;
+var savedCount     = 0;
+var historyData    = [];
+var stdMs          = 0;  // standard time in ms (0 = not set)
+
+// ── Clock ────────────────────────────────────────────────────────
+function updateClock() {
+  var el = document.getElementById("realtime-clock");
+  if (el) el.innerText = new Date().toLocaleTimeString("th-TH");
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ── Standard Time handlers ───────────────────────────────────────
+function onStationChange() {
+  var station = document.getElementById("station").value;
+  var std     = STATION_STD[station];
+  if (std) {
+    var m = Math.floor(std / 60);
+    var s = std % 60;
+    document.getElementById("stdMin").value = m;
+    document.getElementById("stdSec").value = s;
+    onStdChange();
+  } else {
+    document.getElementById("stdMin").value = "";
+    document.getElementById("stdSec").value = "";
+    onStdChange();
+  }
+}
+
+function onDeptChange() {
+  // no auto-action needed but hook available
+}
+
+function onStdChange() {
+  var m = parseInt(document.getElementById("stdMin").value) || 0;
+  var s = parseInt(document.getElementById("stdSec").value) || 0;
+  stdMs = (m * 60 + s) * 1000;
+
+  var prev = document.getElementById("std-preview");
+  if (stdMs > 0) {
+    prev.innerHTML = 'เวลามาตรฐาน: <strong style="color:var(--purple)">' + fmtMs(stdMs) + '</strong>';
+    document.getElementById("std-bar").style.display = "flex";
+    document.getElementById("std-target-val").innerText = fmtMs(stdMs);
+    updateProgressBar();
+  } else {
+    prev.innerText = "";
+    document.getElementById("std-bar").style.display = "none";
+  }
+}
+
+function updateProgressBar() {
+  if (!stdMs) return;
+  var lapMs = historyData.length > 0 ? historyData[historyData.length-1].lapMs : 0;
+  var avgMs = historyData.length > 0
+    ? historyData.reduce(function(s,r){return s+r.lapMs;},0)/historyData.length : 0;
+
+  if (lapMs > 0) {
+    var pct = Math.round((stdMs / lapMs) * 100);
+    pct = Math.min(pct, 200);
+    var fill = Math.min(pct, 100);
+    var fillEl = document.getElementById("prog-fill");
+    var pctEl  = document.getElementById("prog-pct");
+    var labEl  = document.getElementById("prog-label");
+    fillEl.style.width = fill + "%";
+    if (pct >= 100) {
+      fillEl.style.background = "var(--green)";
+      pctEl.style.color = "var(--green)";
+    } else if (pct >= 80) {
+      fillEl.style.background = "var(--amber)";
+      pctEl.style.color = "var(--amber)";
+    } else {
+      fillEl.style.background = "var(--red)";
+      pctEl.style.color = "var(--red)";
+    }
+    pctEl.innerText = pct + "%";
+    labEl.innerText = "ประสิทธิภาพ (รอบล่าสุด)";
+
+    var lapEl = document.getElementById("std-lap-val");
+    var lapParent = document.getElementById("std-bar-lap");
+    lapEl.innerText = fmtMs(lapMs);
+    lapParent.className = "std-item " + getStdClass(lapMs);
+  }
+
+  if (avgMs > 0) {
+    var avgEl  = document.getElementById("std-avg-val");
+    var avgPar = document.getElementById("std-bar-avg");
+    avgEl.innerText = fmtMs(avgMs);
+    avgPar.className = "std-item " + getStdClass(avgMs);
+  }
+}
+
+function getStdClass(ms) {
+  if (!stdMs || stdMs === 0) return "";
+  var ratio = ms / stdMs;
+  if (ratio <= 1.0) return "ok";
+  if (ratio <= 1.2) return "warn";
+  return "over";
+}
+
+function getVsStdHtml(lapMs) {
+  if (!stdMs) return '<span style="color:var(--subtle);font-size:11px;">—</span>';
+  var diff  = lapMs - stdMs;
+  var ratio = lapMs / stdMs;
+  var cls   = getStdClass(lapMs);
+  var icon  = cls === "ok" ? "✓" : (cls === "warn" ? "△" : "↑");
+  var sign  = diff >= 0 ? "+" : "";
+  return '<span class="vs-std ' + cls + '">' + icon + ' ' + sign + fmtMs(Math.abs(diff)) + '</span>';
+}
+
+// ── Timer ────────────────────────────────────────────────────────
+function startTimer() {
+  var name    = document.getElementById("empName").value.trim();
+  var station = document.getElementById("station").value;
+  if (!name)    { showToast("กรุณาระบุชื่อพนักงานก่อนเริ่ม", "warn"); document.getElementById("empName").focus(); return; }
+  if (!station) { showToast("กรุณาเลือกสถานีงานก่อนเริ่ม",  "warn"); document.getElementById("station").focus(); return; }
+
+  var now = Date.now();
+  totalStartTime = now;
+  lastLapTime    = now;
+  isRunning      = true;
+  lapCount       = 0;
+  savedCount     = 0;
+  historyData    = [];
+
+  clearInterval(timerInterval);
+  timerInterval = setInterval(updateDisplay, 50);
+
+  document.getElementById("empName").disabled = true;
+  document.getElementById("dept").disabled    = true;
+  document.getElementById("station").disabled = true;
+  document.getElementById("stdMin").disabled  = true;
+  document.getElementById("stdSec").disabled  = true;
+
+  setBtn("startBtn", true);
+  setBtn("stopBtn",  false);
+  setBtn("saveBtn",  true);
+
+  setBadge("กำลังทำงาน", "working");
+  updateHistoryTable();
+  updateStatsLocal();
+  showToast("▶ เริ่มจับเวลาแล้ว!", "success");
+}
+
+function updateDisplay() {
+  if (!isRunning || !totalStartTime) return;
+  var el  = document.getElementById("display");
+  var el2 = document.getElementById("lap-time-display");
+  if (el)  el.innerText  = formatTime(Date.now() - totalStartTime);
+  if (el2 && lastLapTime) el2.innerText = fmtMs(Date.now() - lastLapTime);
+}
+
+function lapAndSave() {
+  if (!isRunning) return;
+  var now         = Date.now();
+  var lapMs       = now - lastLapTime;
+  var lapStartStr = new Date(lastLapTime).toLocaleTimeString("th-TH");
+  lastLapTime     = now;
+  lapCount++;
+
+  var name    = document.getElementById("empName").value.trim();
+  var dept    = document.getElementById("dept").value;
+  var station = document.getElementById("station").value;
+
+  var record = {
+    no:           lapCount,
+    timestamp:    new Date().toLocaleTimeString("th-TH"),
+    name:         name,
+    dept:         dept,
+    station:      station,
+    empId:        slugify(name),
+    lapMs:        lapMs,
+    lapTime:      formatTime(lapMs),
+    totalTime:    formatTime(now - totalStartTime),
+    totalMs:      now - totalStartTime,
+    startTimeStr: lapStartStr,
+    endTimeStr:   new Date().toLocaleTimeString("th-TH"),
+    stdMs:        stdMs,
+  };
+
+  historyData.push(record);
+  updateHistoryTable();
+  updateStatsLocal();
+  updateProgressBar();
+  setBtn("saveBtn", false);
+
+  var cls = getStdClass(lapMs);
+  var suffix = "";
+  if (stdMs) {
+    var diff = lapMs - stdMs;
+    suffix = cls === "ok"
+      ? " ✓ ต่ำกว่ามาตรฐาน " + fmtMs(Math.abs(diff))
+      : (cls === "warn" ? " △ เกิน " + fmtMs(diff) + " (เตือน)" : " ↑ เกิน " + fmtMs(diff));
+  }
+  showToast("รอบที่ " + lapCount + " — " + formatTime(lapMs) + suffix, cls === "over" ? "warn" : "success");
+}
+
+function resetTimer() {
+  if (historyData.length > 0) {
+    if (!confirm("มีข้อมูล " + historyData.length + " รอบที่ยังไม่ได้บันทึก\nต้องการรีเซ็ตจริงหรือไม่?")) return;
+  }
+  clearInterval(timerInterval);
+  isRunning      = false;
+  totalStartTime = null;
+  lastLapTime    = null;
+  lapCount       = 0;
+  savedCount     = 0;
+  historyData    = [];
+
+  var el = document.getElementById("display");
+  var el2 = document.getElementById("lap-time-display");
+  if (el)  el.innerText  = "00:00:00";
+  if (el2) el2.innerText = "--:--";
+
+  document.getElementById("empName").disabled = false;
+  document.getElementById("dept").disabled    = false;
+  document.getElementById("station").disabled = false;
+  document.getElementById("stdMin").disabled  = false;
+  document.getElementById("stdSec").disabled  = false;
+
+  setBtn("startBtn", false);
+  setBtn("stopBtn",  true);
+  setBtn("saveBtn",  true);
+
+  setBadge("IDLE", "");
+  updateHistoryTable();
+  updateStatsLocal();
+  if (stdMs) {
+    document.getElementById("prog-fill").style.width = "0%";
+    document.getElementById("prog-pct").innerText = "—";
+    document.getElementById("std-lap-val").innerText = "--:--";
+    document.getElementById("std-avg-val").innerText = "--:--";
+  }
+  loadDashboard();
+}
+
+// ── Save to Sheet ────────────────────────────────────────────────
+function saveData() {
+  if (historyData.length === 0) { showToast("ยังไม่มีข้อมูลรอบการทำงาน", "warn"); return; }
+
+  showLoading(true);
+  setBtn("saveBtn", true);
+
+  var payload = historyData.map(function(r) {
+    return {
+      empId:     r.empId,    empName:   r.name,
+      dept:      r.dept,     station:   r.station,
+      startTime: r.startTimeStr, endTime: r.endTimeStr,
+      duration:  r.lapTime,  elapsedMs: r.lapMs,
+      stdMs:     r.stdMs || 0,
+      remark:    r.stdMs ? ("Standard:" + fmtMs(r.stdMs)) : "",
+    };
+  });
+
+  function onSuccess(result) {
+    showLoading(false);
+    if (result && result.status === "ok") {
+      savedCount  += payload.length;
+      historyData  = [];
+      lapCount     = 0;
+      if (isRunning) lastLapTime = Date.now();
+      setBtn("saveBtn", true);
+      updateHistoryTable();
+      updateStatsLocal();
+      loadDashboard();
+      showToast("✅ บันทึก " + result.saved + " รอบ ลง Google Sheet แล้ว!", "success");
+    } else {
+      showToast("❌ บันทึกไม่สำเร็จ: " + (result ? result.message : "Unknown"), "error");
+      setBtn("saveBtn", false);
+    }
+  }
+  function onFail(err) {
+    showLoading(false);
+    showToast("❌ เกิดข้อผิดพลาด: " + (err.message || err), "error");
+    setBtn("saveBtn", false);
+    console.error(err);
+  }
+
+  if (typeof google !== "undefined" && google.script && google.script.run) {
+    google.script.run.withSuccessHandler(onSuccess).withFailureHandler(onFail).saveTimerData(payload);
+  } else {
+    var n = payload.length;
+    console.log("[Demo] payload:", JSON.stringify(payload));
+    setTimeout(function() { onSuccess({ status: "ok", saved: n }); }, 700);
+  }
+}
+
+// ── Dashboard ────────────────────────────────────────────────────
+function loadDashboard() {
+  if (typeof google === "undefined" || !google.script || !google.script.run) return;
+  google.script.run
+    .withSuccessHandler(function(data) {
+      if (!data) return;
+      if (!isRunning && historyData.length === 0) {
+        var ct = document.getElementById("count-today");
+        var at = document.getElementById("avg-time");
+        var bt = document.getElementById("best-time");
+        if (ct) ct.innerText = data.count || 0;
+        if (at) at.innerText = data.avgMs ? (data.avgMs / 60000).toFixed(1) : "0.0";
+        if (bt) bt.innerText = (data.bestMs && data.bestMs > 0) ? fmtMs(data.bestMs) : "--:--";
+      }
+    })
+    .withFailureHandler(function(err) { console.warn("Dashboard:", err); })
+    .getDashboardData(getTodayStr());
+}
+
+// ── Export CSV ───────────────────────────────────────────────────
+function exportCSV() {
+  function doExport(sheetRows) {
+    var pending = historyData.map(function(r) {
+      return { no: (sheetRows.length + r.no), date: getTodayStr(),
+               timestamp: r.timestamp, name: r.name, dept: r.dept,
+               station: r.station, lapTime: r.lapTime, totalTime: r.totalTime,
+               stdTime: r.stdMs ? fmtMs(r.stdMs) : "—",
+               vsStd: r.stdMs ? (r.lapMs <= r.stdMs ? "ปกติ" : "เกิน+" + fmtMs(r.lapMs - r.stdMs)) : "—" };
+    });
+    var all = sheetRows.concat(pending);
+    if (all.length === 0) { showToast("ไม่มีข้อมูล Export", "warn"); return; }
+    _downloadCSV(all);
+  }
+
+  if (typeof google !== "undefined" && google.script && google.script.run) {
+    showLoading(true);
+    google.script.run
+      .withSuccessHandler(function(result) {
+        showLoading(false);
+        var sheetRows = [];
+        if (result && result.rows && result.rows.length > 0) {
+          sheetRows = result.rows.map(function(r, i) {
+            return {
+              no: i+1, date: String(r.date || getTodayStr()),
+              timestamp: String(r.endTime || r.timestamp || ""),
+              name: String(r.empName || ""), dept: String(r.dept || ""),
+              station: String(r.station || ""),
+              lapTime: String(r.duration || formatTime(Number(r.elapsedMs)||0)),
+              totalTime: formatTime(Number(r.elapsedMs)||0),
+              stdTime: r.remark && r.remark.indexOf("Standard:") === 0 ? r.remark.replace("Standard:", "") : "—",
+              vsStd: "—",
+            };
+          });
+        }
+        doExport(sheetRows);
+      })
+      .withFailureHandler(function() {
+        showLoading(false);
+        doExport([]);
+      })
+      .getHistoryData({ date: getTodayStr(), limit: 1000 });
+  } else {
+    doExport([]);
+  }
+}
+
+function _downloadCSV(rows) {
+  if (!rows || rows.length === 0) { showToast("ไม่มีข้อมูล", "warn"); return; }
+  var header = ["\uFEFFลำดับรอบ","วันที่","เวลาที่บันทึก","พนักงาน","แผนก","สถานีงาน","เวลารายรอบ","เวลาสะสม","เวลามาตรฐาน","เทียบมาตรฐาน"];
+  var lines = [header.join(",")];
+  rows.forEach(function(r, i) {
+    lines.push([
+      r.no || (i+1),
+      csvEsc(r.date || getTodayStr()),
+      csvEsc(r.timestamp || ""),
+      csvEsc(r.name || ""),
+      csvEsc(r.dept || ""),
+      csvEsc(r.station || ""),
+      csvEsc(r.lapTime || ""),
+      csvEsc(r.totalTime || ""),
+      csvEsc(r.stdTime || "—"),
+      csvEsc(r.vsStd || "—"),
+    ].join(","));
+  });
+  var blob = new Blob([lines.join("\n")], { type:"text/csv;charset=utf-8;" });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement("a");
+  a.href = url; a.download = "Production_Log_" + getTodayStr() + ".csv";
+  document.body.appendChild(a); a.click();
+  setTimeout(function() { document.body.removeChild(a); URL.revokeObjectURL(url); }, 200);
+  showToast("✅ Export CSV " + rows.length + " รอบ สำเร็จ!", "success");
+}
+
+function csvEsc(v) { return '"' + String(v || "").replace(/"/g, '""') + '"'; }
+
+// ── History Table ────────────────────────────────────────────────
+function updateHistoryTable() {
+  var tbody = document.getElementById("history-body");
+  var badge = document.getElementById("history-count");
+  if (!tbody) return;
+  if (badge) badge.innerText = historyData.length;
+  if (historyData.length === 0) {
+    tbody.innerHTML = '<tr class="empty-msg"><td colspan="6">ยังไม่มีประวัติการทำงานในรอบนี้</td></tr>';
+    return;
+  }
+  tbody.innerHTML = historyData.map(function(r) {
+    return '<tr>' +
+      '<td><span class="lap-no">' + r.no + '</span></td>' +
+      '<td style="font-size:12px;color:var(--muted);">' + r.timestamp + '</td>' +
+      '<td><div class="emp-name">' + escHtml(r.name) + '</div>' +
+      '<div class="emp-sub">' + escHtml(r.dept||"") + (r.station ? ' · ' + escHtml(r.station) : '') + '</div></td>' +
+      '<td><span class="mono-val ' + getStdClass(r.lapMs) + '">' + r.lapTime + '</span></td>' +
+      '<td>' + getVsStdHtml(r.lapMs) + '</td>' +
+      '<td style="font-family:\'IBM Plex Mono\',monospace;font-size:12px;color:var(--subtle);">' + r.totalTime + '</td>' +
+      '</tr>';
+  }).join("");
+  var wrap = document.querySelector(".table-wrap");
+  if (wrap) wrap.scrollTo({ top: wrap.scrollHeight, behavior: "smooth" });
+}
+
+// ── Stats ────────────────────────────────────────────────────────
+function updateStatsLocal() {
+  var lc = document.getElementById("lap-current");
+  var ct = document.getElementById("count-today");
+  var at = document.getElementById("avg-time");
+  var bt = document.getElementById("best-time");
+  var ov = document.getElementById("over-std");
+
+  if (lc) lc.innerText = lapCount;
+  if (ct) ct.innerText = savedCount + lapCount;
+
+  if (historyData.length > 0) {
+    var ms   = historyData.map(function(r) { return r.lapMs; });
+    var avg  = ms.reduce(function(s,v){return s+v;},0) / ms.length;
+    var best = Math.min.apply(null, ms);
+    var over = stdMs ? ms.filter(function(m){return m > stdMs;}).length : 0;
+    if (at) at.innerText = (avg / 60000).toFixed(1);
+    if (bt) bt.innerText = fmtMs(best);
+    if (ov) ov.innerText = over;
+    // color best stat card green if under std
+    var btEl = document.getElementById("best-time");
+    if (btEl && stdMs) btEl.style.color = best <= stdMs ? "var(--green)" : "var(--red)";
+  } else if (!isRunning) {
+    if (lc) lc.innerText = 0;
+    if (ct) ct.innerText = savedCount;
+    if (at) at.innerText = "0.0";
+    if (bt) bt.innerText = "--:--";
+    if (ov) ov.innerText = 0;
+  }
+}
+
+// ── Utilities ────────────────────────────────────────────────────
+function formatTime(ms) {
+  if (ms < 0) ms = 0;
+  return pad(Math.floor(ms/3600000)) + ":" +
+         pad(Math.floor((ms%3600000)/60000)) + ":" +
+         pad(Math.floor((ms%60000)/1000));
+}
+function fmtMs(ms) {
+  if (!ms || ms <= 0) return "--:--";
+  return pad(Math.floor(ms/60000)) + ":" + pad(Math.floor((ms%60000)/1000));
+}
+function pad(n) { return String(n).padStart(2,"0"); }
+function getTodayStr() {
+  var d = new Date();
+  return d.getFullYear() + "-" + pad(d.getMonth()+1) + "-" + pad(d.getDate());
+}
+function slugify(s) { return (s||"anon").replace(/\s+/g,"-").substring(0,50); }
+function escHtml(s) {
+  return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+function setBtn(id, disabled) { var el=document.getElementById(id); if(el) el.disabled=disabled; }
+function setBadge(text, cls) {
+  var b  = document.getElementById("status-badge");
+  var bt = document.getElementById("status-text");
+  if (b)  b.className  = "status-pill" + (cls ? " " + cls : "");
+  if (bt) bt.innerText = text;
+}
+function showToast(msg, type) {
+  var t = document.getElementById("toast");
+  if (!t) return;
+  t.innerText = msg;
+  t.className = "show " + (type || "success");
+  clearTimeout(window._tt);
+  window._tt = setTimeout(function(){ t.classList.remove("show"); }, 3200);
+}
+function showLoading(show) {
+  var el = document.getElementById("loading-overlay");
+  if (!el) return;
+  if (show) el.classList.add("show"); else el.classList.remove("show");
+}
+
+// ── Init ─────────────────────────────────────────────────────────
+window.addEventListener("load", function() {
+  loadDashboard();
+  updateStatsLocal();
+});
+</script>
+</body>
+</html>
